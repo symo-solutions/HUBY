@@ -1,0 +1,164 @@
+// Smart Ads Controller - Prisma schema
+//
+// Provider is SQLite for zero-infra local dev. The schema is intentionally
+// portable: enums are stored as String (validated at app level via lib/enums.ts)
+// and Json fields use Prisma's `Json` scalar (mapped to TEXT on SQLite).
+// To deploy on PostgreSQL: switch `provider = "postgresql"` and re-run migrate.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  name           String?
+  passwordHash   String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  adAccounts     AdAccount[]
+  rules          AutomationRule[]
+  logs           AutomationLog[]
+}
+
+// ---------------------------------------------------------------------------
+// Ads integrations
+// ---------------------------------------------------------------------------
+
+model AdAccount {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform        String     // "META" | "GOOGLE" - see lib/enums.ts
+  externalId      String     // e.g. act_1234 for Meta, customers/123 for Google
+  name            String
+  currency        String?    @default("EUR")
+
+  // OAuth tokens (encrypted at rest in production - see lib/crypto.ts)
+  accessToken     String
+  refreshToken   String?
+  tokenExpiresAt  DateTime?
+
+  connectedAt     DateTime   @default(now())
+  lastSyncedAt    DateTime?
+
+  campaigns       Campaign[]
+
+  @@unique([userId, platform, externalId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Campaigns + Metrics
+// ---------------------------------------------------------------------------
+
+model Campaign {
+  id            String           @id @default(cuid())
+  adAccountId   String
+  adAccount     AdAccount        @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+
+  externalId    String           // platform-side campaign id
+  name          String
+  status        String           @default("UNKNOWN") // CampaignStatus values
+  dailyBudget   Float?           // in account currency
+  objective     String?
+
+  // Cached aggregate metrics (last 30d) for fast dashboard reads
+  spend         Float            @default(0)
+  impressions   Int              @default(0)
+  clicks        Int              @default(0)
+  conversions   Int              @default(0)
+  revenue       Float            @default(0)
+  roas          Float?           // revenue / spend
+  ctr           Float?           // clicks / impressions
+
+  flagged       Boolean          @default(false)
+  flagReason    String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  metrics       CampaignMetric[]
+  logs          AutomationLog[]
+
+  @@unique([adAccountId, externalId])
+  @@index([adAccountId])
+}
+
+model CampaignMetric {
+  id           String   @id @default(cuid())
+  campaignId   String
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  date         DateTime
+  spend        Float    @default(0)
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  conversions  Int      @default(0)
+  revenue      Float    @default(0)
+
+  @@unique([campaignId, date])
+  @@index([campaignId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Rule engine
+// ---------------------------------------------------------------------------
+
+model AutomationRule {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type        String    // RuleType values - see lib/enums.ts
+  enabled     Boolean   @default(true)
+
+  // Tunable thresholds (sensible defaults set client-side)
+  threshold   Float?    // e.g. 1.0 for ROAS, 0.5 for CTR%
+  windowDays  Int?      @default(3)
+  // Free-form params (e.g. budget increase percent), stored as JSON string.
+  // Use lib/json-field.ts helpers to read/write.
+  params      String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  logs        AutomationLog[]
+
+  @@unique([userId, type])
+  @@index([userId])
+}
+
+model AutomationLog {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ruleId      String?
+  rule        AutomationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  campaignId  String?
+  campaign    Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  action      String     // LogAction values
+  status      String     @default("SUCCESS") // LogStatus values
+  message     String
+  // Free-form metadata, stored as JSON string. See lib/json-field.ts.
+  metadata    String?
+
+  createdAt   DateTime   @default(now())
+
+  @@index([userId, createdAt])
+  @@index([campaignId])
+}
