@@ -1,13 +1,13 @@
 /**
- * Tools the agent can call.
+ * Outils que l'agent peut appeler.
  *
- * Each tool has:
- *  - a JSON schema (used by OpenAI function calling)
- *  - a handler(userId, args) that runs server-side
+ * Chaque outil possède :
+ *  - un schéma JSON (utilisé par le « function calling » d'OpenAI)
+ *  - un handler(userId, args) qui s'exécute côté serveur
  *
- * Handlers are responsible for authorization (every Prisma query MUST be
- * scoped by userId) and for returning a small JSON-serializable result that
- * the LLM can read on the next step.
+ * Les handlers sont responsables de l'autorisation (chaque requête Prisma
+ * DOIT être restreinte par userId) et renvoient un résultat JSON court que
+ * le LLM peut lire à l'étape suivante.
  */
 
 import { prisma } from "@/lib/db";
@@ -31,29 +31,29 @@ export const TOOLS: LLMTool[] = [
     function: {
       name: "create_campaign",
       description:
-        "Create a new campaign in the local DB. Real Meta/Google APIs are NOT touched. Use a preset for quick demo scenarios, or specify custom metrics. Always pass a name.",
+        "Crée une nouvelle campagne dans la base locale. Les API réelles Meta/Google ne sont PAS appelées. Utilise un preset pour les scénarios de démo rapides, ou précise les métriques manuellement. Le nom est toujours obligatoire.",
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Campaign name" },
+          name: { type: "string", description: "Nom de la campagne" },
           platform: {
             type: "string",
             enum: ["META", "GOOGLE"],
             description:
-              "If omitted, defaults to the user's first connected ad account.",
+              "Si absent, utilise le premier compte publicitaire connecté de l'utilisateur.",
           },
           status: {
             type: "string",
             enum: ["ACTIVE", "PAUSED", "ARCHIVED"],
-            description: "Defaults to ACTIVE.",
+            description: "Par défaut : ACTIVE.",
           },
-          dailyBudget: { type: "number", description: "Daily budget" },
-          objective: { type: "string", description: "e.g. CONVERSIONS, REACH" },
+          dailyBudget: { type: "number", description: "Budget journalier" },
+          objective: { type: "string", description: "Ex. CONVERSIONS, REACH" },
           preset: {
             type: "string",
             enum: ["winner", "loser", "lowctr", "noconv"],
             description:
-              "Quick preset that pre-fills realistic metrics: 'winner' = high ROAS (~3.0), 'loser' = low ROAS (~0.4), 'lowctr' = CTR ~0.2%, 'noconv' = spend without conversion. Overrides spend/impressions/etc.",
+              "Preset rapide qui pré-remplit des métriques réalistes : 'winner' = ROAS élevé (~3,0), 'loser' = ROAS faible (~0,4), 'lowctr' = CTR ~0,2 %, 'noconv' = dépense sans conversion. Surcharge spend/impressions/etc.",
           },
           spend: { type: "number" },
           impressions: { type: "number" },
@@ -70,7 +70,7 @@ export const TOOLS: LLMTool[] = [
     function: {
       name: "list_campaigns",
       description:
-        "List the user's campaigns with their KPIs. Filter by platform and/or status.",
+        "Liste les campagnes de l'utilisateur avec leurs KPIs. Filtres possibles par plateforme et/ou statut.",
       parameters: {
         type: "object",
         properties: {
@@ -87,7 +87,7 @@ export const TOOLS: LLMTool[] = [
     type: "function",
     function: {
       name: "pause_campaign",
-      description: "Pause a campaign. Identify by id (preferred) or by name.",
+      description: "Met une campagne en pause. Identifiable par id (préféré) ou par nom.",
       parameters: {
         type: "object",
         properties: {
@@ -101,7 +101,7 @@ export const TOOLS: LLMTool[] = [
     type: "function",
     function: {
       name: "resume_campaign",
-      description: "Resume (set ACTIVE) a campaign by id or by name.",
+      description: "Réactive une campagne (statut ACTIVE) par id ou par nom.",
       parameters: {
         type: "object",
         properties: {
@@ -115,7 +115,7 @@ export const TOOLS: LLMTool[] = [
     type: "function",
     function: {
       name: "update_budget",
-      description: "Update the daily budget of a campaign.",
+      description: "Met à jour le budget journalier d'une campagne.",
       parameters: {
         type: "object",
         properties: {
@@ -125,7 +125,7 @@ export const TOOLS: LLMTool[] = [
           deltaPct: {
             type: "number",
             description:
-              "Percentage delta (positive or negative) applied to the current budget. Either newBudget OR deltaPct.",
+              "Variation en pourcentage (positive ou négative) appliquée au budget courant. Préciser soit newBudget, SOIT deltaPct.",
           },
         },
       },
@@ -136,7 +136,7 @@ export const TOOLS: LLMTool[] = [
     function: {
       name: "delete_campaign",
       description:
-        "Delete a campaign (local DB only — does not touch Meta/Google).",
+        "Supprime une campagne (base locale uniquement — sans effet sur Meta/Google).",
       parameters: {
         type: "object",
         properties: {
@@ -151,7 +151,7 @@ export const TOOLS: LLMTool[] = [
     function: {
       name: "evaluate_rules",
       description:
-        "Run the automation rule engine immediately on the user's campaigns.",
+        "Exécute immédiatement le moteur de règles d'automatisation sur les campagnes de l'utilisateur.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -160,14 +160,14 @@ export const TOOLS: LLMTool[] = [
     function: {
       name: "get_summary",
       description:
-        "Aggregated KPIs (spend, ROAS, CTR), top campaigns and flagged ones for the user.",
+        "KPIs agrégés (dépense, ROAS, CTR), top campagnes et campagnes signalées pour l'utilisateur.",
       parameters: { type: "object", properties: {} },
     },
   },
 ];
 
 // ---------------------------------------------------------------------------
-// Handlers
+// Handlers (exécution serveur)
 // ---------------------------------------------------------------------------
 
 export type ToolResult = Record<string, unknown> & {
@@ -242,7 +242,7 @@ export async function executeTool(
       case "get_summary":
         return await getSummary(userId);
       default:
-        return { ok: false, error: `Unknown tool: ${name}` };
+        return { ok: false, error: `Outil inconnu : ${name}` };
     }
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -272,7 +272,7 @@ async function findCampaignByIdOrName(
     });
   }
   if (typeof args.name === "string" && args.name) {
-    // Best match: exact then prefix then contains
+    // Meilleure correspondance : exacte d'abord, puis « contient »
     const exact = await prisma.campaign.findFirst({
       where: { name: args.name, adAccount: { userId } },
     });
@@ -351,7 +351,7 @@ async function createCampaign(
     },
   });
 
-  // Synthesize 7d daily metrics so windowed rules have data
+  // Synthétise 7 jours de métriques quotidiennes pour que les règles à fenêtre disposent de données
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   for (let i = 0; i < 7; i++) {
@@ -542,7 +542,7 @@ async function getSummary(userId: string): Promise<ToolResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers internes
 // ---------------------------------------------------------------------------
 
 function pickNumber(...vals: unknown[]): number {

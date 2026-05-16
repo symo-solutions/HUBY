@@ -2,6 +2,7 @@
   "name": "smart-ads-controller",
   "version": "0.1.0",
   "private": true,
+  "description": "SaaS de pilotage automatisé des campagnes Meta Ads et Google Ads, avec moteur de règles et assistant IA conversationnel — interface 100% en français.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",

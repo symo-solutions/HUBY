@@ -1,12 +1,13 @@
 /**
- * POST /api/campaigns - manually create a campaign in the local DB.
+ * POST /api/campaigns — crée manuellement une campagne dans la base locale.
  *
- * Used for testing/demo purposes (option A). The campaign is attached to
- * one of the user's existing AdAccounts and gets synthetic per-day metrics
- * for the last 7 days, so the rule engine can immediately act on it.
+ * Utilisé à des fins de test et de démonstration. La campagne est rattachée
+ * à un AdAccount existant de l'utilisateur, et reçoit 7 jours de métriques
+ * journalières synthétiques pour que le moteur de règles puisse réagir
+ * immédiatement.
  *
- * Real campaigns flow through `lib/sync.ts` (Meta + Google APIs) and never
- * touch this endpoint.
+ * Les vraies campagnes passent par `lib/sync.ts` (API Meta + Google) et
+ * n'utilisent jamais cet endpoint.
  */
 
 import { NextResponse } from "next/server";
@@ -22,14 +23,15 @@ const createSchema = z.object({
   status: z.enum(CAMPAIGN_STATUS_VALUES).default("ACTIVE"),
   dailyBudget: z.number().nonnegative().nullish(),
   objective: z.string().max(80).nullish(),
-  // Optional aggregate metrics (last 30d). If provided, we synthesize 7d of
-  // daily metrics so the rule engine has a window to evaluate against.
+  // Métriques agrégées optionnelles (30 derniers jours). Si fournies, on
+  // synthétise 7 jours de métriques quotidiennes pour que les règles à
+  // fenêtre disposent de données.
   spend: z.number().nonnegative().default(0),
   impressions: z.number().int().nonnegative().default(0),
   clicks: z.number().int().nonnegative().default(0),
   conversions: z.number().int().nonnegative().default(0),
   revenue: z.number().nonnegative().default(0),
-  // If true, run the rule engine right after creating the campaign.
+  // Si true, on déclenche le moteur de règles juste après la création.
   evaluateRules: z.boolean().default(true),
 });
 
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
-  // Authorization: the ad account must belong to the user.
+  // Autorisation : le compte publicitaire doit appartenir à l'utilisateur.
   const account = await prisma.adAccount.findFirst({
     where: { id: data.adAccountId, userId: user.id },
   });
@@ -83,8 +85,9 @@ export async function POST(req: Request) {
     },
   });
 
-  // Synthesize 7d of daily metrics from the 30d aggregate so windowed rules
-  // (PAUSE_LOW_ROAS, FLAG_LOW_CTR, ALERT_NO_CONVERSION) have data to chew on.
+  // Synthétise 7 jours de métriques quotidiennes à partir de l'agrégat 30 j
+  // pour que les règles à fenêtre (PAUSE_LOW_ROAS, FLAG_LOW_CTR,
+  // ALERT_NO_CONVERSION) disposent de données à analyser.
   const days = 7;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -97,7 +100,7 @@ export async function POST(req: Request) {
   for (let i = 0; i < days; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    // small deterministic noise for variety
+    // léger bruit déterministe pour varier les valeurs
     const noise = (i % 3) * 0.1 - 0.1;
     await prisma.campaignMetric.create({
       data: {

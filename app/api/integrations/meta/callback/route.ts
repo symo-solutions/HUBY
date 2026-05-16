@@ -23,7 +23,8 @@ export async function GET(req: Request) {
   }
 
   const expected = cookies().get("meta_oauth_state")?.value;
-  // In mock mode (no app id), skip strict state checking so devs can test E2E
+  // En mode mock (pas d'app id Meta), on relâche la vérification stricte du
+  // « state » OAuth pour permettre aux développeurs de tester de bout en bout.
   const usingMocks = !process.env.META_APP_ID;
   if (!usingMocks && (!state || !expected || state !== expected)) {
     return NextResponse.redirect(

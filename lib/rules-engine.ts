@@ -1,15 +1,16 @@
 /**
- * Rule engine.
+ * Moteur de règles d'automatisation.
  *
- * For each user, we load their enabled rules + recent campaign data and
- * apply each rule. Side effects (pause, budget update) call out to the
- * Meta / Google APIs and we record an AutomationLog row for everything.
+ * Pour chaque utilisateur, on charge ses règles activées + les données
+ * récentes des campagnes et on applique chaque règle. Les effets de bord
+ * (pause, mise à jour de budget) appellent les API Meta / Google, et on
+ * enregistre une ligne AutomationLog pour chaque action.
  *
- * Rules supported (MVP):
- *  - PAUSE_LOW_ROAS         : ROAS < threshold for N days -> pause
- *  - INCREASE_BUDGET_HIGH_ROAS : ROAS > threshold -> +X% daily budget
- *  - FLAG_LOW_CTR           : CTR < threshold% -> flag campaign
- *  - ALERT_NO_CONVERSION    : spend > threshold and 0 conversions -> alert
+ * Règles supportées (MVP) :
+ *  - PAUSE_LOW_ROAS            : ROAS < seuil pendant N jours → mise en pause
+ *  - INCREASE_BUDGET_HIGH_ROAS : ROAS > seuil → +X % du budget journalier
+ *  - FLAG_LOW_CTR              : CTR < seuil % → campagne signalée
+ *  - ALERT_NO_CONVERSION       : dépense > seuil et 0 conversion → alerte
  */
 
 import type {
@@ -139,7 +140,7 @@ async function applyRule(
   rule: AutomationRule,
   campaign: CampaignWithContext,
 ): Promise<boolean> {
-  // Skip campaigns we can't act on
+  // Ignore les campagnes sur lesquelles on ne peut rien faire
   if (
     campaign.status === CampaignStatus.ARCHIVED ||
     campaign.adAccount.userId !== rule.userId
@@ -149,7 +150,7 @@ async function applyRule(
 
   const ruleType = rule.type as RuleType;
   const defaults = RULE_DEFAULTS[ruleType];
-  if (!defaults) return false; // unknown rule type stored in DB
+  if (!defaults) return false; // type de règle inconnu stocké en base
   const threshold = rule.threshold ?? defaults.threshold;
   const windowDays = rule.windowDays ?? defaults.windowDays;
   const params = fromJsonField<Record<string, unknown>>(rule.params) ?? defaults.params;
@@ -175,7 +176,7 @@ async function applyRule(
 }
 
 // ---------------------------------------------------------------------------
-// Individual rules
+// Implémentation de chaque règle
 // ---------------------------------------------------------------------------
 
 async function pauseLowRoas(
@@ -187,7 +188,7 @@ async function pauseLowRoas(
   if (campaign.status !== CampaignStatus.ACTIVE) return false;
 
   const recent = lastNDays(campaign.metrics, windowDays);
-  if (recent.length < windowDays) return false; // not enough data
+  if (recent.length < windowDays) return false; // pas assez de données
 
   const allLow = recent.every((m) => {
     if (m.spend <= 0) return false;
@@ -225,7 +226,7 @@ async function increaseBudgetHighRoas(
   if (!campaign.dailyBudget) return false;
   if (!campaign.roas || campaign.roas <= threshold) return false;
 
-  // Don't act on the same campaign more than once per 24h
+  // Ne pas agir plus d'une fois toutes les 24 h sur la même campagne
   const recentlyActed = await prisma.automationLog.findFirst({
     where: {
       ruleId: rule.id,
@@ -277,7 +278,7 @@ async function flagLowCtr(
     }),
     { impressions: 0, clicks: 0 },
   );
-  if (totals.impressions < 1000) return false; // ignore noisy small samples
+  if (totals.impressions < 1000) return false; // ignorer les échantillons trop petits (bruit)
 
   const ctr = (totals.clicks / totals.impressions) * 100;
   if (ctr >= thresholdPct) {
@@ -332,7 +333,7 @@ async function alertNoConversion(
 
   if (totals.spend < spendThreshold || totals.conversions > 0) return false;
 
-  // Don't spam alerts - skip if one already exists in the last window
+  // Évite de spammer : on ignore s'il existe déjà une alerte dans la fenêtre
   const recentAlert = await prisma.automationLog.findFirst({
     where: {
       ruleId: rule.id,
@@ -360,7 +361,7 @@ async function alertNoConversion(
 }
 
 // ---------------------------------------------------------------------------
-// Platform side-effects
+// Effets de bord côté plateformes (Meta / Google)
 // ---------------------------------------------------------------------------
 
 async function pauseCampaignOnPlatform(campaign: CampaignWithContext) {
@@ -385,11 +386,11 @@ async function updateBudgetOnPlatform(
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers internes
 // ---------------------------------------------------------------------------
 
 function lastNDays(metrics: CampaignMetric[], n: number): CampaignMetric[] {
-  // metrics are pre-sorted desc by date
+  // les métriques sont déjà triées par date décroissante
   return metrics.slice(0, n);
 }
 

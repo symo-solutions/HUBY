@@ -1,10 +1,11 @@
 /**
- * Application-level enums.
+ * Énumérations applicatives.
  *
- * We define enums as const objects (not Prisma enums) so the schema works on
- * both SQLite (dev) and PostgreSQL (prod) without changing application code.
- * The Prisma schema stores these as TEXT/VARCHAR columns; runtime validation
- * lives here.
+ * On définit ces énumérations sous forme d'objets `const` (et non d'enums
+ * Prisma) pour que le schéma fonctionne aussi bien sur SQLite (dev) que
+ * sur PostgreSQL (prod), sans changer le code applicatif. Le schéma Prisma
+ * stocke ces valeurs en TEXT/VARCHAR ; la validation à l'exécution se
+ * trouve ici.
  */
 
 export const Platform = {
@@ -45,7 +46,7 @@ export const LogStatus = {
 } as const;
 export type LogStatus = (typeof LogStatus)[keyof typeof LogStatus];
 
-// Tuples for zod's z.enum()
+// Tuples utilisés par les schémas zod (z.enum())
 export const PLATFORM_VALUES = ["META", "GOOGLE"] as const;
 export const CAMPAIGN_STATUS_VALUES = [
   "ACTIVE",

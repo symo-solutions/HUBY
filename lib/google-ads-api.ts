@@ -1,11 +1,12 @@
 /**
- * Google Ads API client (thin wrapper).
+ * Client de l'API Google Ads (wrapper léger).
  *
- * In production this would use the official `google-ads-api` library + GAQL
- * queries. For the MVP we implement a small surface and fall back to mocks
- * when credentials are missing so the full pipeline runs locally.
+ * En production, on utiliserait la bibliothèque officielle `google-ads-api`
+ * avec des requêtes GAQL. Pour le MVP, on implémente une surface réduite
+ * et on bascule sur des mocks si les identifiants manquent, afin que tout
+ * le pipeline tourne en local.
  *
- * Docs: https://developers.google.com/google-ads/api/docs/start
+ * Docs : https://developers.google.com/google-ads/api/docs/start
  */
 
 import { CampaignStatus } from "@/lib/enums";
@@ -132,8 +133,8 @@ export async function fetchGoogleAdAccounts(_accessToken: string) {
       { externalId: "customers/9876543210", name: "Mock Google Ads Account", currency: "EUR" },
     ];
   }
-  // Real impl: googleads.customers.listAccessibleCustomers
-  // Left as a TODO - the MVP relies on mocks until a developer token is set.
+  // Implémentation réelle : googleads.customers.listAccessibleCustomers
+  // Laissé en TODO — le MVP utilise des mocks tant que le developer token n'est pas défini.
   return [];
 }
 
@@ -144,8 +145,8 @@ export async function fetchGoogleCampaigns(
   if (shouldUseMocks()) {
     return mockGoogleCampaigns(customerId);
   }
-  // Real impl: GAQL `SELECT campaign.id, campaign.name, campaign.status,
-  // campaign_budget.amount_micros FROM campaign`
+  // Implémentation réelle : GAQL `SELECT campaign.id, campaign.name,
+  // campaign.status, campaign_budget.amount_micros FROM campaign`
   return [];
 }
 
@@ -156,9 +157,9 @@ export async function fetchGoogleInsights(
   if (shouldUseMocks()) {
     return mockGoogleCampaigns(customerId).map((c) => mockGoogleInsights(c.externalId));
   }
-  // Real impl: GAQL `SELECT campaign.id, metrics.cost_micros, metrics.impressions,
-  // metrics.clicks, metrics.conversions, metrics.conversions_value FROM campaign
-  // WHERE segments.date DURING LAST_30_DAYS`
+  // Implémentation réelle : GAQL `SELECT campaign.id, metrics.cost_micros,
+  // metrics.impressions, metrics.clicks, metrics.conversions,
+  // metrics.conversions_value FROM campaign WHERE segments.date DURING LAST_30_DAYS`
   return [];
 }
 
@@ -167,7 +168,7 @@ export async function pauseGoogleCampaign(
   externalId: string,
 ): Promise<void> {
   if (shouldUseMocks()) return;
-  // Real impl: googleads.campaigns.mutate with status PAUSED
+  // Implémentation réelle : googleads.campaigns.mutate avec status PAUSED
   console.log(`[google-ads] pause ${externalId}`);
 }
 
@@ -181,7 +182,7 @@ export async function updateGoogleBudget(
 }
 
 // ---------------------------------------------------------------------------
-// Mocks
+// Données simulées
 // ---------------------------------------------------------------------------
 
 function mockGoogleCampaigns(customer: string): GoogleCampaign[] {

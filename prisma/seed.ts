@@ -1,9 +1,9 @@
 /**
- * Seed a demo account.
+ * Crée un compte de démonstration.
  *
  *   npm run db:seed
  *
- * Login: demo@smart-ads.dev / demo12345
+ * Identifiants : demo@smart-ads.dev / demo12345
  */
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
@@ -20,7 +20,7 @@ async function main() {
   const user = await prisma.user.upsert({
     where: { email },
     update: { passwordHash },
-    create: { email, name: "Demo User", passwordHash },
+    create: { email, name: "Utilisateur Démo", passwordHash },
   });
 
   await prisma.adAccount.upsert({
@@ -35,7 +35,7 @@ async function main() {
       userId: user.id,
       platform: Platform.META,
       externalId: "act_1000001",
-      name: "Demo Meta Ads",
+      name: "Compte Meta Démo",
       currency: "EUR",
       accessToken: "mock-meta-token-seed",
     },
@@ -54,7 +54,7 @@ async function main() {
       userId: user.id,
       platform: Platform.GOOGLE,
       externalId: "customers/9876543210",
-      name: "Demo Google Ads",
+      name: "Compte Google Démo",
       currency: "EUR",
       accessToken: "mock-google-token-seed",
       refreshToken: "mock-google-refresh-seed",
@@ -77,8 +77,8 @@ async function main() {
     });
   }
 
-  console.log(`Seeded user ${email} (password: demo12345)`);
-  console.log("Run a sync from /dashboard to populate campaigns + metrics.");
+  console.log(`Compte de démonstration créé : ${email} (mot de passe : demo12345)`);
+  console.log("Lancez une synchronisation depuis /dashboard pour peupler campagnes et métriques.");
 }
 
 main()

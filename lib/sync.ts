@@ -1,8 +1,9 @@
 /**
- * Data sync orchestrator.
+ * Orchestrateur de synchronisation des données.
  *
- * For each connected ad account, pull campaigns + insights, upsert into the
- * DB, and recompute aggregate metrics. Then run the rule engine.
+ * Pour chaque compte publicitaire connecté : récupère les campagnes et les
+ * insights, fait un upsert en base et recalcule les métriques agrégées.
+ * Lance ensuite le moteur de règles.
  */
 
 import type { AdAccount } from "@prisma/client";
@@ -114,7 +115,7 @@ export async function syncUser(userId: string): Promise<SyncResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers internes
 // ---------------------------------------------------------------------------
 
 type Combined = MetaCampaign & MetaInsights;
@@ -161,8 +162,9 @@ async function writeDailyMetrics(
   campaignId: string,
   combined: Combined,
 ): Promise<number> {
-  // For the MVP we synthesize 7 days of daily metrics from the 30d aggregate
-  // (each platform exposes per-day breakdowns; we collapse here for simplicity).
+  // Pour le MVP, on synthétise 7 jours de métriques quotidiennes à partir
+  // de l'agrégat 30 j (chaque plateforme expose un détail journalier ; on
+  // simplifie ici pour le MVP).
   const daysBack = 7;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -177,7 +179,7 @@ async function writeDailyMetrics(
   for (let i = 0; i < daysBack; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    // small deterministic noise based on day index
+    // léger bruit déterministe basé sur l'index du jour
     const noise = (i % 3) * 0.1 - 0.1;
     await prisma.campaignMetric.upsert({
       where: { campaignId_date: { campaignId, date } },

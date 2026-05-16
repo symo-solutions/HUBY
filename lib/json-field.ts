@@ -1,10 +1,11 @@
 /**
- * Helpers for JSON-as-TEXT fields.
+ * Helpers pour les champs JSON stockés en TEXT.
  *
- * SQLite doesn't have a native Json type in Prisma, so we store free-form
- * payloads (rule params, automation log metadata) as TEXT and (de)serialize
- * here. The same helpers work transparently if we later move to Postgres
- * (we'd just switch the column type back to `Json`).
+ * Prisma n'a pas de type Json natif sur SQLite : on stocke donc les
+ * payloads libres (paramètres de règles, métadonnées des logs
+ * d'automatisation) en TEXT, et on (dé)sérialise ici. Les mêmes helpers
+ * fonctionneront tels quels si on passe plus tard sur Postgres (il
+ * suffira de changer la colonne en `Json`).
  */
 
 export function toJsonField(value: unknown): string | null {

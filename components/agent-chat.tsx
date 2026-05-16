@@ -60,7 +60,7 @@ export function AgentChat() {
 
   useEffect(() => {
     if (open) {
-      // Auto-scroll to bottom + focus input
+      // Défilement automatique vers le bas + focus sur la zone de saisie
       requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({
           top: scrollRef.current.scrollHeight,
@@ -71,7 +71,7 @@ export function AgentChat() {
     }
   }, [open, messages]);
 
-  // Close on ESC
+  // Fermeture via la touche Échap
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -125,7 +125,7 @@ export function AgentChat() {
       };
       setMessages((prev) => [...prev, reply]);
 
-      // If the agent did anything that could change page data, refresh it
+      // Si l'agent a fait une action susceptible de modifier les données affichées, on rafraîchit
       const hasMutating = data.actions?.some(
         (a) =>
           a.tool === "create_campaign" ||
@@ -160,7 +160,7 @@ export function AgentChat() {
 
   return (
     <>
-      {/* Floating bubble */}
+      {/* Bulle flottante */}
       <button
         type="button"
         aria-label="Ouvrir l'assistant IA"
@@ -180,7 +180,7 @@ export function AgentChat() {
         )}
       </button>
 
-      {/* Slide-in panel */}
+      {/* Panneau coulissant */}
       <div
         className={`fixed bottom-24 right-6 z-40 flex w-[min(calc(100vw-3rem),420px)] flex-col rounded-2xl border border-border bg-white shadow-2xl transition-all ${
           open
@@ -191,7 +191,7 @@ export function AgentChat() {
         role="dialog"
         aria-label="Assistant IA"
       >
-        {/* Header */}
+        {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-indigo-600 text-white">
@@ -236,7 +236,7 @@ export function AgentChat() {
           </div>
         </div>
 
-        {/* Suggestions when empty */}
+        {/* Suggestions affichées quand la conversation est vide */}
         {messages.length === 1 && !loading && (
           <div className="border-t border-border px-3 py-3">
             <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -257,7 +257,7 @@ export function AgentChat() {
           </div>
         )}
 
-        {/* Input */}
+        {/* Zone de saisie */}
         <div className="border-t border-border p-3">
           <div className="flex items-end gap-2 rounded-xl border border-border bg-card focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
             <textarea

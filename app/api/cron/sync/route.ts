@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { syncAllUsers } from "@/lib/sync";
 
 /**
- * Periodic sync endpoint - protected by CRON_SECRET.
+ * Endpoint de synchronisation périodique — protégé par CRON_SECRET.
  *
- * - Vercel cron: configure in vercel.json with `?secret=...` or
+ * - Vercel cron : à configurer dans vercel.json avec `?secret=...` ou
  *   `Authorization: Bearer ...`.
- * - node-cron: see scripts/cron.ts (calls this endpoint every 6 hours).
+ * - node-cron : voir scripts/cron.ts (appelle cet endpoint toutes les 6 h).
  */
 export async function GET(req: Request) {
   if (!isAuthorized(req)) {
@@ -38,7 +38,7 @@ export const POST = GET;
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    // No secret configured - reject in production, allow in dev for convenience
+    // Aucun secret configuré : on refuse en production, on autorise en dev par commodité
     return process.env.NODE_ENV !== "production";
   }
   const url = new URL(req.url);

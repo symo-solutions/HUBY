@@ -1,11 +1,12 @@
 /**
- * Agent orchestrator.
+ * Orchestrateur de l'agent IA.
  *
- * Runs a chat turn: feeds messages to the LLM, executes any tool calls
- * server-side, and loops until the model produces a final assistant message
- * (or we hit the step budget).
+ * Exécute un tour de chat : transmet les messages au LLM, exécute les
+ * appels d'outils côté serveur, et boucle jusqu'à ce que le modèle
+ * produise un message final (ou que le budget d'étapes soit atteint).
  *
- * Falls back to a deterministic intent parser when no OPENAI_API_KEY is set.
+ * Bascule sur un parseur d'intention déterministe quand OPENAI_API_KEY
+ * n'est pas défini.
  */
 
 import { prisma } from "@/lib/db";
@@ -25,8 +26,8 @@ import {
 
 export type ChatTurnInput = {
   userId: string;
-  // Conversation history WITHOUT system messages. The orchestrator injects
-  // its own system prompt (with up-to-date user context) on every turn.
+  // Historique de conversation SANS les messages « system ». L'orchestrateur
+  // injecte son propre prompt système (avec contexte utilisateur frais) à chaque tour.
   history: { role: "user" | "assistant"; content: string }[];
 };
 
@@ -54,7 +55,7 @@ export async function runChatTurn(
 }
 
 // ---------------------------------------------------------------------------
-// LLM mode
+// Mode LLM (OpenAI)
 // ---------------------------------------------------------------------------
 
 async function runWithLLM(input: ChatTurnInput): Promise<ChatTurnOutput> {
@@ -78,14 +79,14 @@ async function runWithLLM(input: ChatTurnInput): Promise<ChatTurnOutput> {
       };
     }
 
-    // Append the assistant's tool-calling message to history
+    // Ajoute à l'historique le message assistant qui appelle les outils
     messages.push({
       role: "assistant",
       content: response.content,
       tool_calls: response.toolCalls,
     });
 
-    // Execute each tool and append the tool result
+    // Exécute chaque outil et ajoute son résultat à l'historique
     for (const call of response.toolCalls) {
       const args = parseArgs(call);
       const result = await executeTool(input.userId, call.function.name, args);
@@ -167,12 +168,13 @@ async function buildSystemPrompt(userId: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Mock mode (no OPENAI_API_KEY)
+// Mode démo (sans OPENAI_API_KEY)
 // ---------------------------------------------------------------------------
 
 /**
- * Tiny intent parser. It's intentionally dumb but handles the most common
- * French/English phrasings so the demo flows nicely without an LLM key.
+ * Petit parseur d'intention. Volontairement minimaliste : il reconnaît les
+ * tournures françaises (et quelques équivalents anglais) les plus
+ * courantes pour que la démo fonctionne sans clé LLM.
  */
 async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
   const lastUser = [...input.history].reverse().find((m) => m.role === "user");
@@ -189,7 +191,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
   const actions: AgentAction[] = [];
   let message = "";
 
-  // ---- Greeting / help
+  // ---- Salutation / aide
   if (/^(salut|bonjour|hello|hi|aide|help|\?)/.test(text)) {
     message = [
       "Salut ! Je suis l'assistant Smart Ads Controller.",
@@ -204,7 +206,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- Summary
+  // ---- Résumé
   if (/(résumé|résume|résumé|recap|recap|bilan|kpi|stats|summary)/.test(text)) {
     const result = await executeTool(input.userId, "get_summary", {});
     actions.push({ tool: "get_summary", args: {}, result });
@@ -212,7 +214,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- Evaluate rules
+  // ---- Évaluer les règles
   if (/(évalue|evalue|exécute|execute|run).*(règle|regle|rule)/.test(text)) {
     const result = await executeTool(input.userId, "evaluate_rules", {});
     actions.push({ tool: "evaluate_rules", args: {}, result });
@@ -220,7 +222,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- Create campaign
+  // ---- Créer une campagne
   const createMatch = /(crée|cree|créer|creer|nouvelle|new|create)/.test(text);
   if (createMatch && /(campagne|campaign)/.test(text)) {
     let preset: string | undefined;
@@ -261,7 +263,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     if (!result.ok) {
       message = `Je n'ai pas pu créer la campagne : ${result.error}`;
     } else {
-      // Auto-evaluate rules so the user immediately sees the engine react
+      // Évalue les règles dans la foulée pour que l'utilisateur voie le moteur réagir
       const evalResult = await executeTool(input.userId, "evaluate_rules", {});
       actions.push({ tool: "evaluate_rules", args: {}, result: evalResult });
       const took = evalResult.actionsTaken ?? 0;
@@ -274,7 +276,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- Pause / resume by name
+  // ---- Pause / reprise par nom
   const pauseMatch = text.match(
     /(pause|met[s]?.?en.?pause|stop|coupe).*?(?:campagne\s*)?["«»']?([^"«»']{2,})["«»']?\s*$/,
   );
@@ -290,7 +292,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return await runStatusChange(input.userId, name, CampaignStatus.ACTIVE, "réactivée");
   }
 
-  // ---- Update budget by name
+  // ---- Modifier le budget par nom
   const budgetPctMatch = text.match(
     /(?:augmente|monte|baisse|réduis|reduis|change).*?(?:budget\s+(?:de|du|sur))?\s*["«»']?([^"«»']{2,}?)["«»']?\s+(?:de|à|a|to|by)?\s*(-?\d+)\s*%/,
   );
@@ -333,7 +335,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- Delete by name
+  // ---- Supprimer par nom
   const delMatch = text.match(
     /(supprime|delete|efface|retire).*?["«»']?([^"«»']{2,})["«»']?\s*$/,
   );
@@ -347,7 +349,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- List
+  // ---- Lister
   if (/(liste|montre|list|show|affiche)/.test(text) && /(campagne|campaign)/.test(text)) {
     const platform = /(google|adwords)/.test(text)
       ? "GOOGLE"
@@ -366,7 +368,7 @@ async function runWithMock(input: ChatTurnInput): Promise<ChatTurnOutput> {
     return { message, actions, mode: "mock" };
   }
 
-  // ---- Fallback
+  // ---- Repli (intention non comprise)
   message = [
     "Je n'ai pas bien compris (mode démo, sans clé OpenAI). Voici ce que je sais faire :",
     "• « crée une campagne perdante » (ou gagnante / faible CTR / sans conversion)",

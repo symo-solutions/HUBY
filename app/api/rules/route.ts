@@ -21,7 +21,7 @@ export async function GET() {
   const rules = await prisma.automationRule.findMany({
     where: { userId: user.id },
   });
-  // Decode params JSON for client consumption.
+  // Décode le JSON des paramètres avant envoi au client.
   return NextResponse.json(
     rules.map((r) => ({ ...r, params: fromJsonField(r.params) ?? {} })),
   );

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     data: { name, email: normalized, passwordHash },
   });
 
-  // Provision default automation rules (disabled, ready to flip on)
+  // Provisionne les règles d'automatisation par défaut (désactivées, prêtes à être activées)
   await prisma.automationRule.createMany({
     data: (Object.keys(RULE_DEFAULTS) as RuleType[]).map((type) => ({
       userId: user.id,

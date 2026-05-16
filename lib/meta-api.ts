@@ -1,11 +1,12 @@
 /**
- * Meta (Facebook) Marketing API client.
+ * Client de l'API Meta Marketing (Facebook).
  *
- * In production we hit the Graph API. When no credentials are configured
- * (or USE_MOCKS=true), we return deterministic mock data so the rest of the
- * pipeline (sync -> rules -> dashboard) keeps working end-to-end.
+ * En production, on appelle directement la Graph API. Lorsqu'aucune clé
+ * n'est configurée (ou si USE_MOCKS=true), on renvoie des données simulées
+ * déterministes pour que le reste du pipeline (sync → règles → tableau de
+ * bord) continue à fonctionner de bout en bout.
  *
- * Docs: https://developers.facebook.com/docs/marketing-api
+ * Docs : https://developers.facebook.com/docs/marketing-api
  */
 
 import { CampaignStatus } from "@/lib/enums";
@@ -136,7 +137,7 @@ export async function fetchMetaCampaigns(
     externalId: c.id,
     name: c.name,
     status: mapMetaStatus(c.status),
-    // Meta returns budget in minor units (cents)
+    // Meta renvoie le budget en unités mineures (centimes)
     dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
     objective: c.objective ?? null,
   }));
@@ -221,7 +222,7 @@ export async function updateMetaBudget(
 }
 
 // ---------------------------------------------------------------------------
-// Helpers + mocks
+// Helpers + données simulées
 // ---------------------------------------------------------------------------
 
 function mapMetaStatus(s: string): CampaignStatus {
@@ -266,7 +267,7 @@ function mockMetaCampaigns(account: string): MetaCampaign[] {
 }
 
 function mockInsights(externalId: string): MetaInsights {
-  // Deterministic pseudo-random based on id
+  // Pseudo-aléatoire déterministe basé sur l'identifiant
   const hash = [...externalId].reduce((a, c) => a + c.charCodeAt(0), 0);
   const rand = (min: number, max: number) =>
     min + ((hash * 9301 + 49297) % 233280) / 233280 * (max - min);

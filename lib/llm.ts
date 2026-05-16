@@ -1,11 +1,11 @@
 /**
- * Minimal LLM client for the agent.
+ * Client LLM minimal pour l'agent.
  *
- * - If OPENAI_API_KEY is set: hits the OpenAI Chat Completions API with tool
- *   calling (gpt-4o-mini by default).
- * - Otherwise: returns null and the caller falls back to a deterministic
- *   intent parser (see lib/agent.ts) so the chat works out-of-the-box for
- *   the demo without paying for tokens.
+ * - Si OPENAI_API_KEY est défini : appelle l'API OpenAI Chat Completions
+ *   avec « function calling » (gpt-4o-mini par défaut).
+ * - Sinon : renvoie null et l'appelant bascule sur un parseur d'intention
+ *   déterministe (voir lib/agent.ts), ce qui permet à la démo de
+ *   fonctionner sans dépenser de jetons.
  */
 
 export type LLMRole = "system" | "user" | "assistant" | "tool";
@@ -48,7 +48,7 @@ export async function callLLM(
 ): Promise<LLMResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY not set");
+    throw new Error("OPENAI_API_KEY n'est pas défini");
   }
 
   const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
@@ -90,7 +90,7 @@ export async function callLLM(
 }
 
 function serializeMessage(m: LLMMessage) {
-  // OpenAI's API rejects "null" content for some message types; normalize.
+  // L'API OpenAI rejette un contenu « null » pour certains types de messages : on normalise.
   const base: Record<string, unknown> = { role: m.role };
   if (m.role === "tool") {
     base.tool_call_id = m.tool_call_id;
